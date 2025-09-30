@@ -15,6 +15,7 @@ Minder doom. Meer doén. FocusPlay is een Next.js 14 MVP dat doomscrollen vervan
 3. Start lokaal met `pnpm dev` en open [http://localhost:3000](http://localhost:3000).
 
 ### Demo modus (zonder externe diensten)
+- **Rebased:** deze demo-mode implementatie is opnieuw toegepast op de huidige main-stand zonder conflicts.
 - Zet `DEMO_MODE=true` in `.env.local` als je Supabase, Stripe en OpenAI wilt overslaan.
 - Start met `pnpm dev` – de app draait volledig in-memory met 50+ demo-kaarten.
 - Login is vervangen door “Doorgaan als demo-gebruiker”; XP, streak en daglimiet leven in geheugen.
