@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireUser, getSupabaseRouteHandler } from "@/lib/auth";
-import { DAILY_LIMITS } from "@/lib/utils";
+import { DAILY_LIMITS, THEMES } from "@/lib/utils";
+import { isDemoMode, hasSupabaseConfig } from "@/lib/env";
+import { getDemoFeed } from "@/lib/mock";
 
 function getUtcStartOfDay(date: Date) {
   const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -10,25 +12,20 @@ function getUtcStartOfDay(date: Date) {
 const PAGE_SIZE = 10;
 
 export async function GET(request: Request) {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    !process.env.SUPABASE_SERVICE_ROLE_KEY
-  ) {
-    const { MOCK_CHALLENGES } = await import("@/lib/mock");
-    return NextResponse.json({
-      items: MOCK_CHALLENGES,
-      nextCursor: null,
-      xp: 120,
-      streak: 3,
-      premium: "free",
-      dailyRemaining: 10
-    });
+  const { searchParams } = new URL(request.url);
+
+  if (isDemoMode() || !hasSupabaseConfig()) {
+    const cursor = searchParams.get("cursor");
+    const premiumParam = searchParams.get("premium");
+    const premiumOverride = premiumParam === null ? undefined : premiumParam === "1";
+    const demo = getDemoFeed({ cursor, premiumOverride });
+    return NextResponse.json(demo);
   }
   const user = await requireUser();
   const supabase = getSupabaseRouteHandler();
-  const { searchParams } = new URL(request.url);
   const cursor = searchParams.get("cursor");
+  const requestedTheme = searchParams.get("theme");
+  const requestedTeam = searchParams.get("teamId");
 
   const profileQuery = supabase.from("users").select("*").eq("id", user.id).single();
 
@@ -39,6 +36,42 @@ export async function GET(request: Request) {
   if (!profile) {
     return NextResponse.json({ error: "Profiel mist" }, { status: 404 });
   }
+
+  const isPro = profile.premium_tier === "pro";
+
+  const activeTheme = requestedTheme && isPro && THEMES.includes(requestedTheme as (typeof THEMES)[number])
+    ? requestedTheme
+    : null;
+
+  let activeTeamId: string | null = null;
+  if (requestedTeam && isPro) {
+    const { data: membership } = await supabase
+      .from("team_members")
+      .select("team_id")
+      .eq("team_id", requestedTeam)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    activeTeamId = membership?.team_id ?? null;
+    if (!activeTeamId) {
+      return NextResponse.json({ error: "Geen toegang tot team" }, { status: 403 });
+    }
+  }
+
+  const teams = isPro
+    ? (
+        (
+          await supabase
+            .from("team_members")
+            .select("team_id, team_rooms(id, name, theme, invite_code)")
+            .eq("user_id", user.id)
+        ).data ?? []
+      ).map((row) => ({
+        id: row.team_id,
+        name: row.team_rooms?.name ?? "",
+        theme: row.team_rooms?.theme ?? null,
+        invite_code: row.team_rooms?.invite_code ?? null
+      }))
+    : [];
 
   const dailyLimit = DAILY_LIMITS[profile.premium_tier] ?? 10;
   const startOfToday = getUtcStartOfDay(now);
@@ -60,7 +93,13 @@ export async function GET(request: Request) {
       xp: profile.xp,
       streak: profile.streak_days,
       premium: profile.premium_tier,
-      dailyRemaining: 0
+      dailyRemaining: 0,
+      teams,
+      activeFilters: {
+        theme: activeTheme,
+        teamId: activeTeamId
+      },
+      factViews: []
     });
   }
 
@@ -76,6 +115,16 @@ export async function GET(request: Request) {
     challengeQuery.lt("created_at", cursor);
   }
 
+  if (activeTheme) {
+    challengeQuery.eq("theme", activeTheme);
+  }
+
+  if (activeTeamId) {
+    challengeQuery.eq("team_id", activeTeamId);
+  } else {
+    challengeQuery.is("team_id", null);
+  }
+
   const { data: challenges } = await challengeQuery;
 
   const items = (challenges ?? [])
@@ -87,6 +136,17 @@ export async function GET(request: Request) {
   const nextCursor = challenges && challenges.length > pageLimit ? challenges[pageLimit].created_at : null;
 
   const servedCount = items.length;
+
+  let factViews: string[] = [];
+  const factIds = items.filter((item) => item.type === "fact").map((item) => item.id);
+  if (factIds.length) {
+    const { data: views } = await supabase
+      .from("fact_views")
+      .select("challenge_id")
+      .eq("user_id", user.id)
+      .in("challenge_id", factIds);
+    factViews = (views ?? []).map((view) => view.challenge_id);
+  }
 
   if (dailyLimit !== Infinity && servedCount > 0) {
     const updatedCount = consumedToday + servedCount;
@@ -107,6 +167,12 @@ export async function GET(request: Request) {
     xp: profile.xp,
     streak: profile.streak_days,
     premium: profile.premium_tier,
-    dailyRemaining
+    dailyRemaining,
+    teams,
+    activeFilters: {
+      theme: activeTheme,
+      teamId: activeTeamId
+    },
+    factViews
   });
 }

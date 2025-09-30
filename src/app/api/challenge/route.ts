@@ -16,6 +16,7 @@ export async function POST(request: Request) {
   const type = String(formData.get("type"));
   const theme = String(formData.get("theme"));
   const payload = formData.get("payload");
+  const teamIdValue = formData.get("teamId");
   let jsonPayload: Record<string, unknown> = {};
   try {
     jsonPayload = payload ? JSON.parse(String(payload)) : {};
@@ -25,10 +26,22 @@ export async function POST(request: Request) {
   const parsed = CreateChallengeSchema.safeParse({
     type,
     theme,
+    teamId: teamIdValue ? String(teamIdValue) : undefined,
     ...jsonPayload
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "Ongeldig challenge-formaat" }, { status: 400 });
+  }
+  if (parsed.data.teamId) {
+    const { data: membership } = await supabase
+      .from("team_members")
+      .select("team_id")
+      .eq("team_id", parsed.data.teamId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!membership) {
+      return NextResponse.json({ error: "Geen toegang tot dit team" }, { status: 403 });
+    }
   }
   const { data, error } = await supabase.from("challenges").insert({
     type: parsed.data.type,
@@ -40,7 +53,8 @@ export async function POST(request: Request) {
       fact: parsed.data.fact
     },
     author: user.id,
-    visibility: "global"
+    visibility: parsed.data.teamId ? "friends" : "global",
+    team_id: parsed.data.teamId ?? null
   });
   if (error) {
     return NextResponse.json({ error: "Kon challenge niet bewaren" }, { status: 500 });

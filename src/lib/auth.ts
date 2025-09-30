@@ -1,7 +1,9 @@
 import { createRouteHandlerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { Database } from "@/types/database";
+import { isDemoMode } from "@/lib/env";
+import { DEMO_USER_ID } from "@/mock/seed";
 
 export function getSupabaseRouteHandler() {
   const cookieStore = cookies();
@@ -13,6 +15,27 @@ export function getSupabaseRouteHandler() {
 }
 
 export async function requireUser() {
+  if (isDemoMode()) {
+    const now = new Date().toISOString();
+    const demoUser: User = {
+      id: DEMO_USER_ID,
+      aud: "authenticated",
+      role: "authenticated",
+      email: "demo@focusplay.app",
+      email_confirmed_at: now,
+      phone: "",
+      last_sign_in_at: now,
+      confirmed_at: now,
+      created_at: now,
+      updated_at: now,
+      identities: [],
+      app_metadata: { provider: "demo" },
+      user_metadata: { demo: true },
+      factors: [],
+      is_anonymous: false
+    };
+    return demoUser;
+  }
   const supabase = getSupabaseRouteHandler();
   const {
     data: { session }

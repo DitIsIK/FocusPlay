@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "seed:full": "supabase db push"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.19",

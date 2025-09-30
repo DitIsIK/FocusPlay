@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 
 interface ProfileResponse {
   premium_tier: "free" | "premium" | "pro";
+  teams?: { id: string; name: string }[];
+  demoMode?: boolean;
 }
 
 export const dynamic = "force-dynamic";
@@ -23,7 +25,8 @@ export default async function CreatePage() {
     throw new Error("Kon profiel niet laden");
   }
   const profile = (await res.json()) as ProfileResponse;
-  const isPremium = profile.premium_tier !== "free";
+  const isPremium = profile.premium_tier !== "free" || profile.demoMode;
+  const teams = profile.teams ?? [];
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-4 pb-24 pt-10">
@@ -31,6 +34,7 @@ export default async function CreatePage() {
         <div>
           <h1 className="text-3xl font-semibold">Create</h1>
           <p className="text-sm text-white/60">Drop je eigen kaart. Premium only.</p>
+          {profile.demoMode && <p className="text-xs text-white/40">Demo overslaat de paywall voor testen.</p>}
         </div>
         <NavTabs />
       </header>
@@ -53,6 +57,19 @@ export default async function CreatePage() {
               ))}
             </select>
           </label>
+          {teams.length > 0 && (
+            <label className="flex flex-col gap-2 text-sm text-white/80">
+              Team (optioneel)
+              <select name="teamId" className="rounded-2xl border border-white/10 bg-black/40 px-3 py-2">
+                <option value="">Public</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="flex flex-col gap-2 text-sm text-white/80">
             Type
             <select name="type" className="rounded-2xl border border-white/10 bg-black/40 px-3 py-2">

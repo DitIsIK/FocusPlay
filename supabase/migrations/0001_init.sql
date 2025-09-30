@@ -44,7 +44,15 @@ insert into challenges (id, type, theme, content)
 values
   (uuid_generate_v4(),'fact','general','{"fact":"Koffie dempt adenosine — daardoor voelt slaap ver weg."}'),
   (uuid_generate_v4(),'quiz','sports','{"question":"Welke NBA speler heeft de meeste MVP’s?","options":["Jordan","LeBron","Kareem","Curry"],"answerIndex":2}'),
-  (uuid_generate_v4(),'poll','gaming','{"question":"Controller vs. muis/keyboard?","options":["Controller","M/K"]}')
+  (uuid_generate_v4(),'poll','gaming','{"question":"Controller vs. muis/keyboard?","options":["Controller","M/K"]}'),
+  (uuid_generate_v4(),'fact','productivity','{"fact":"Een korte walk break verhoogt je focus met ~20%."}'),
+  (uuid_generate_v4(),'quiz','general','{"question":"Hoeveel minuten duurt een Pomodoro blok?","options":["15","20","25","30"],"answerIndex":2}'),
+  (uuid_generate_v4(),'poll','sports','{"question":"Buiten sporten of gym?","options":["Buiten","Gym"]}'),
+  (uuid_generate_v4(),'fact','gaming','{"fact":"Tetris komt van het Griekse woord tetra (vier)."}'),
+  (uuid_generate_v4(),'quiz','productivity','{"question":"Wat is de eerste stap in GTD?","options":["Doen","Verzamelen","Review","Organiseren"],"answerIndex":1}'),
+  (uuid_generate_v4(),'poll','general','{"question":"Ochtend- of avondmens?","options":["Ochtend","Avond"]}'),
+  (uuid_generate_v4(),'fact','sports','{"fact":"Je verbrandt ~100 kcal per 15 minuten touwtje springen."}'),
+  (uuid_generate_v4(),'quiz','gaming','{"question":"Welke studio maakt Zelda?","options":["Capcom","Nintendo","Square","Valve"],"answerIndex":1}')
 on conflict do nothing;
 
 alter table users enable row level security;

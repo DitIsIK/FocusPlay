@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
 import { requireUser, getSupabaseRouteHandler } from "@/lib/auth";
 import { PollVoteSchema } from "@/types/challenge";
+import { awardXp } from "@/lib/xp";
+import { isDemoMode, hasSupabaseConfig } from "@/lib/env";
+import { voteDemoPoll } from "@/lib/mock";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    !process.env.SUPABASE_SERVICE_ROLE_KEY
-  ) {
-    return NextResponse.json({ percentages: [50, 50], xpAwarded: 5 });
-  }
-  const user = await requireUser();
   const parsed = PollVoteSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Ongeldige stem" }, { status: 400 });
   }
+  if (isDemoMode() || !hasSupabaseConfig()) {
+    const result = voteDemoPoll(parsed.data.challengeId, parsed.data.choice);
+    if ("error" in result) {
+      return NextResponse.json({ error: result.error }, { status: 404 });
+    }
+    return NextResponse.json(result);
+  }
+  const user = await requireUser();
   const supabase = getSupabaseRouteHandler();
   const { data: challenge } = await supabase.from("challenges").select("*").eq("id", parsed.data.challengeId).single();
   if (!challenge || challenge.type !== "poll") {
@@ -33,10 +36,11 @@ export async function POST(request: Request) {
     user_id: user.id,
     choice: parsed.data.choice
   });
-  if (!existing) {
-    const { data: profile } = await supabase.from("users").select("xp").eq("id", user.id).single();
-    await supabase.from("users").update({ xp: (profile?.xp ?? 0) + 5 }).eq("id", user.id);
-  }
+  const { newXP, xpDelta } = await awardXp({
+    supabase,
+    userId: user.id,
+    amount: existing ? 0 : 5
+  });
   const { data: votes } = await supabase
     .from("poll_votes")
     .select("choice")
@@ -49,5 +53,5 @@ export async function POST(request: Request) {
   const percentages = options.map((_, idx: number) =>
     Math.round(((totals[idx] ?? 0) / total) * 100)
   );
-  return NextResponse.json({ percentages, xpAwarded: existing ? 0 : 5 });
+  return NextResponse.json({ percentages, xpAwarded: xpDelta, newXP });
 }

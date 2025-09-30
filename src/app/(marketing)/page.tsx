@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { NavTabs } from "@/components/nav-tabs";
 
 export default function LandingPage() {
+  const demoMode = process.env.DEMO_MODE === "true";
   return (
     <main className="min-h-screen px-6 py-16 lg:px-24">
       <div className="mx-auto max-w-3xl text-balance">
@@ -19,7 +20,7 @@ export default function LandingPage() {
             href="/home"
             className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-soft transition hover:opacity-90"
           >
-            Speel nu
+            {demoMode ? "Doorgaan als demo-gebruiker" : "Speel nu"}
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link href="/privacy" className="text-sm text-white/50 hover:text-white">
@@ -36,6 +37,7 @@ export default function LandingPage() {
           <p className="mt-3 text-sm text-white/60">
             Free = 10 kaarten/dag. Premium = onbeperkt scrollen + Create. Pro = team rooms en thematische filters.
           </p>
+          {demoMode && <p className="mt-3 text-xs text-white/40">Demo geeft je alvast een voorproef zonder login.</p>}
         </div>
         <div className="rounded-3xl border border-white/5 bg-white/5 p-8 backdrop-blur">
           <h2 className="text-xl font-semibold">Realtime met je crew.</h2>

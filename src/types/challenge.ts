@@ -16,6 +16,7 @@ export const ChallengeSchema = z.object({
   content: ChallengeContentSchema,
   author: z.string().uuid().nullable(),
   visibility: z.enum(["global", "friends"]),
+  team_id: z.string().uuid().nullable(),
   created_at: z.string()
 });
 
@@ -34,6 +35,7 @@ export const PollVoteSchema = z.object({
 export const CreateChallengeSchema = z.object({
   type: z.enum(["quiz", "poll", "fact"]),
   theme: z.enum(THEMES),
+  teamId: z.string().uuid().optional().nullable(),
   question: z.string().max(200).optional(),
   options: z.array(z.string().max(120)).optional(),
   answerIndex: z.number().int().min(0).max(3).optional(),

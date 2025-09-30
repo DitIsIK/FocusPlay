@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Challenge } from "@/types/challenge";
 import { ChallengeCard } from "@/components/challenge-card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,14 @@ export function QuizCard({ challenge, onAnswer }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const [result, setResult] = useState<null | boolean>(null);
   const [loading, setLoading] = useState(false);
+  const [xpAwarded, setXpAwarded] = useState<number | null>(null);
+
+  useEffect(() => {
+    setSelected(null);
+    setResult(null);
+    setXpAwarded(null);
+    setLoading(false);
+  }, [challenge.id]);
 
   if (!challenge.content.options || challenge.content.answerIndex === undefined || !challenge.content.question) {
     return null;
@@ -25,6 +33,11 @@ export function QuizCard({ challenge, onAnswer }: Props) {
     setSelected(index);
     const outcome = await onAnswer?.({ challengeId: challenge.id, answerIndex: index });
     const correct = outcome ? outcome.correct : index === challenge.content.answerIndex;
+    if (outcome && typeof outcome.xpAwarded === "number") {
+      setXpAwarded(outcome.xpAwarded);
+    } else {
+      setXpAwarded(correct ? 10 : 0);
+    }
     setResult(correct);
     setLoading(false);
   };
@@ -56,7 +69,11 @@ export function QuizCard({ challenge, onAnswer }: Props) {
         </div>
         {result !== null && (
           <p className="text-sm text-white/60">
-            {result ? "Juist! +10 XP" : "Mis. Volgende kaart pakt je wel."}
+            {result
+              ? xpAwarded
+                ? `Juist! +${xpAwarded} XP`
+                : "Juist! Al geteld."
+              : "Mis. Volgende kaart pakt je wel."}
           </p>
         )}
       </div>

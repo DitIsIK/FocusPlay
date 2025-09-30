@@ -2,6 +2,13 @@ import { cookies } from "next/headers";
 import { FeedList } from "@/components/feed-list";
 import { Challenge, ChallengeSchema } from "@/types/challenge";
 
+interface TeamSummary {
+  id: string;
+  name: string;
+  theme: string | null;
+  invite_code: string | null;
+}
+
 interface FeedResponse {
   items: Challenge[];
   nextCursor: string | null;
@@ -9,6 +16,13 @@ interface FeedResponse {
   streak: number;
   premium: "free" | "premium" | "pro";
   dailyRemaining: number | null;
+  teams: TeamSummary[];
+  activeFilters: {
+    theme: string | null;
+    teamId: string | null;
+  };
+  factViews: string[];
+  demoMode?: boolean;
 }
 
 export async function FeedShell() {
